@@ -17,6 +17,10 @@ apache可以直接使用.htaccess, nginx请自行设置
 
 我只上传了application部分的文件, CodeIgniter的主文件请自行下载
 
+#### 建立表结构
+
+导入 sql/table.sql
+
 
 ## 设置
 
