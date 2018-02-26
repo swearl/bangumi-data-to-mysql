@@ -63,20 +63,3 @@ $db['default'] = array(
 $config["github_user"]  = ""; // github用户
 $config["github_token"] = ""; // github token
 ```
-
-## 初始
-
-第一次初始数据, 请使用cli导入.
-因为第一次导入调用的api次数比较多, 所以请先设置好github用户和token.
-否则一定会超出api调用上限而出错
-
-```bash
-php index.php api import_all
-```
-
-## 后续功能
-
-1. 更新功能
-2. 图形界面
-3. 初始安装
-4. 自定义导入/更新

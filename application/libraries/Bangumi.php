@@ -3,6 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 define("BANGUMI_DATA_API_GITHUB_URL", "https://api.github.com/repos/bangumi-data/bangumi-data/");
 define("BANGUMI_DATA_API_GITHUB_CONTENTS_URL", BANGUMI_DATA_API_GITHUB_URL . "contents/");
+define("BANGUMI_DATA_API_GITHUB_COMMITS_URL", BANGUMI_DATA_API_GITHUB_URL . "commits");
 define("BANGUMI_API_URL", "https://api.bgm.tv/");
 
 class Bangumi {
@@ -15,13 +16,14 @@ class Bangumi {
 	public $version = "";
 	public $version_int = 0;
 	public $sha = "";
+	public $sha_first = "bec16f6542ed396ccee84d2c6086f97175918198";
 
 	private $_github_user  = "";
 	private $_github_token = "";
 
 	public function __construct() {
 		$this->_ci =& get_instance();
-		$this->_ci->config("github");
+		$this->_ci->load->config("github");
 		$this->_github_user = config_item("github_user");
 		$this->_github_token = config_item("github_token");
 	}
@@ -92,13 +94,25 @@ class Bangumi {
 		return !empty($translate->$lang) ? $translate->$lang[0] : "";
 	}
 
+	public function get_master_sha() {
+		$url = BANGUMI_DATA_API_GITHUB_URL . "git/refs/heads/master";
+		$json = $this->_get($url);
+		return $json->object->sha;
+	}
+
+	public function get_package_version() {
+		$json = $this->_get(self::PACKAGE_URL);
+		$content = json_decode(base64_decode($json->content));
+		return $content->version;
+	}
+
 	/**
 	 * 从package.json中提取版本
 	 * @return void
 	 */
 	public function parse_package() {
 		$json = $this->_get(self::PACKAGE_URL);
-		$this->sha = $json->sha;
+		$this->sha = $this->get_master_sha();
 		$content = json_decode(base64_decode($json->content));
 		$this->version = $content->version;
 		$this->version_int = $this->version2int($this->version);
@@ -133,9 +147,9 @@ class Bangumi {
 		$data->title_cn = $this->get_cn_title_from_translate($data->titleTranslate);
 		$data->titleTranslate = json_encode($data->titleTranslate, JSON_UNESCAPED_UNICODE);
 		$data->sites = json_encode($data->sites, JSON_UNESCAPED_UNICODE);
-		$data->year = $year;
-		$data->month = (int)str_replace(".json", "", $item->name);
-		$data->version = $this->version_int;
+		// $data->year = $year;
+		// $data->month = (int)str_replace(".json", "", $item->name);
+		// $data->version = $this->version_int;
 
 		if(!empty($data->bangumi_id)) {
 			if($bgm = $this->_m("bangumi")->get_by_bangumi_id($data->bangumi_id)) {
@@ -144,6 +158,40 @@ class Bangumi {
 			}
 		}
 		return $this->_m("bangumi")->insert($data);
+	}
+
+	public function get_update_files() {
+		$sha = $this->get_option("sha");
+		// $sha_master = $this->get_master_sha();
+		if(empty($sha)) {
+			$sha = $this->sha_first;
+		}
+		$url = BANGUMI_DATA_API_GITHUB_URL . "compare/" . $sha . "...master";
+		$data = $this->_get($url);
+		if($data->status == "ahead") {
+			$files = [];
+			foreach($data->files as $file) {
+				if(strpos($file->filename, "data/items/") === 0) {
+					$files[] = $file->filename;
+				}
+			}
+			return $files;
+		}
+		return [];
+	}
+
+	public function get_update_commits() {
+		$sha = $this->get_option("sha");
+		$result = [];
+		if($commits = $this->_get(BANGUMI_DATA_API_GITHUB_COMMITS_URL)) {
+			foreach($commits as $v) {
+				if($v->sha == $sha) {
+					break;
+				}
+				$result[] = $v->sha;
+			}
+		}
+		return $result;
 	}
 
 	public function set_option($name, $content) {

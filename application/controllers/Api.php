@@ -1,35 +1,55 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Api extends CI_Controller {
+class Api extends API_Controller {
 	public function __construct() {
 		parent::__construct();
 		$this->load->library("Bangumi");
+		$this->load->database();
 	}
 
-	public function import_all() {
-		$this->load->database();
-		$this->bangumi->parse_package();
-		$version = $this->bangumi->version2int($this->bangumi->version);
-		echo "getting years...\n";
-		$years = $this->bangumi->get_all_years();
-		foreach($years as $year) {
-			echo "getting {$year} items\n";
-			$items = $this->bangumi->get_items_by_year($year);
-			foreach($items as $item) {
-				echo "getting {$item->path}\n";
-				$data = $this->bangumi->get_item_by_path($item->path);
-				if(!empty($data)) {
-					echo "importing {$item->path}\n";
-					foreach($data as $v) {
-						$this->bangumi->save($v);
-					}
+	public function get_update_files() {
+		$data = $this->bangumi->get_update_files();
+		$this->json($data);
+	}
+
+	public function update_file() {
+		$filename = $this->input->post("filename");
+		$version = $this->input->post("version");
+		$result = new stdClass();
+		$result->status = 1;
+		if(!preg_match("/data\/items\/(.+)\/(.+)\.json/", $filename, $matches)) {
+			$result->status = -1;
+		} else {
+			$year = (int)$matches[1];
+			$month = (int)$matches[2];
+			$data = $this->bangumi->get_item_by_path($filename);
+			if(!empty($data)) {
+				foreach($data as $v) {
+					$v->year = $year;
+					$v->month = $month;
+					$v->version = $this->bangumi->version2int($version);
+					$this->bangumi->save($v);
 				}
+			} else {
+				$result->status = 0;
 			}
 		}
-		$this->bangumi->set_option("version", $this->bangumi->version);
-		$this->bangumi->set_option("sha", $this->bangumi->sha);
-		$this->bangumi->set_option("updated", date("Y-m-d H:i:s"));
-		echo "done\n";
+		$this->json($result);
+	}
+
+	public function update_complete() {
+		$result = new stdClass();
+		$result->status = 1;
+		$version = $this->input->post("version");
+		$sha = $this->input->post("sha");
+		$updated = date("Y-m-d H:i:s");
+		$result->version = $version;
+		$result->sha = $sha;
+		$result->updated = $updated;
+		$this->bangumi->set_option("version", $version);
+		$this->bangumi->set_option("sha", $sha);
+		$this->bangumi->set_option("updated", $updated);
+		$this->json($result);
 	}
 }
