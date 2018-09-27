@@ -80,7 +80,7 @@ $db['default'] = array(
 	'password' => '12345678',
 	'database' => 'bangumi',
 	'dbdriver' => 'mysqli',
-	'dbprefix' => 'bd_',
+	'dbprefix' => '',
 	'pconnect' => FALSE,
 	'db_debug' => (ENVIRONMENT !== 'production'),
 	'cache_on' => FALSE,

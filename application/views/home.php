@@ -7,8 +7,9 @@ $this->load->view("include/header");
 	<div class="container">
 		<h1>bangumi-data to mysql</h1>
 		<hr class="my-4">
-		<p>本地版本: <?php echo $version_local;?> SHA: <?php echo $sha_local;?></p>
+		<p>本地版本: <span id="local-version"><?php echo $version_local;?></span> SHA: <span id="local-sha"><?php echo $sha_local;?></span></p>
 		<p>在线版本: <?php echo $version_online;?> SHA: <?php echo $sha_online;?></p>
+		<p>更新时间: <span id="updated-at"><?php echo $updated_at;?></span></p>
 		<?php if($version_local != $version_online):?>
 		<p class="lead">
 			<a href="#" class="btn btn-primary btn-lg" role="button" id="btn-update">更新</a>
@@ -47,6 +48,7 @@ function update_file() {
 			},
 			type: "post",
 			dataType: "json",
+			timeout: 10000,
 			success: function(json) {
 				if(json.status == 1) {
 					// console.log(json);
@@ -63,6 +65,11 @@ function update_file() {
 						update_file();
 					}
 				}
+			},
+			error: function() {
+				if(confirm(file + "文件更新时出现错误, 是否重试?")) {
+					update_file();
+				}
 			}
 		});
 		// console.log(file);
@@ -77,10 +84,16 @@ function display_status(status) {
 }
 
 function update_progress() {
-	var display = updating_index + "/" + update_files_count;
-	var percent = Math.floor(updating_index / update_files_count * 100);
+	var display;
+	var percent;
+	if(update_files_count == 0) {
+		display = "";
+		percent = 100;
+	} else {
+		display = updating_index + "/" + update_files_count;
+		percent = Math.floor(updating_index / update_files_count * 100);
+	}
 	$("#container-output .progress-bar").html(display).attr("aria-valuenow", percent).css("width", percent + "%");
-	// console.log(percent);
 }
 
 function update_complete() {
@@ -95,6 +108,9 @@ function update_complete() {
 		dataType: "json",
 		success: function(json) {
 			if(json.status == 1) {
+				$("#local-version").html(json.data.version);
+				$("#local-sha").html(json.data.sha);
+				$("#updated-at").html(json.data.updated);
 				display_status("更新完毕");
 			}
 		}
@@ -115,11 +131,11 @@ $(function() {
 			type: "post",
 			dataType: "json",
 			success: function(json) {
-				// _self.removeClass("disabled");
-				// console.log(json);
-				update_files = json;
-				update_files_count = update_files.length;
-				update_file();
+				if(json.status == 1) {
+					update_files = json.data;
+					update_files_count = update_files.length;
+					update_file();
+				}
 			},
 			error: function() {
 				alert("查找更新文件时出错, 请重试");

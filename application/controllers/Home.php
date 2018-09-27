@@ -1,10 +1,9 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Home extends CI_Controller {
+class Home extends MY_Controller {
 	public function __construct() {
 		parent::__construct();
-		$this->load->library("Bangumi");
 	}
 
 	public function index() {
@@ -15,7 +14,13 @@ class Home extends CI_Controller {
 			"version_online" => $this->bangumi->version,
 			"sha_local" => $this->bangumi->get_option("sha"),
 			"sha_online" => $this->bangumi->sha,
+			"updated_at" => $this->bangumi->get_option("updated"),
 		];
 		$this->load->view("home", $data);
+	}
+
+	public function data() {
+		$data = file_get_contents(APPPATH . "cache/data.json");
+		var_dump(json_decode($data));
 	}
 }

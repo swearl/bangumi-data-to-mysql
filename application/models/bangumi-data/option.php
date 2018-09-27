@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Option_model extends MY_Model {
+class Bangumi_data_option_model extends MY_Model {
 	public function get_by_name($name) {
 		return $this->get(["name" => $name]);
 	}
