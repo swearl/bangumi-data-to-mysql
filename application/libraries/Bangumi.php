@@ -13,6 +13,8 @@ class Bangumi {
 	const ONAIR_URL      = "https://raw.githubusercontent.com/bangumi-data/bangumi-data/master/data/sites/onair.json";
 	const DIST_URL       = "https://raw.githubusercontent.com/bangumi-data/bangumi-data/master/dist/data.json";
 
+	const USERAGENT      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0";
+
 	private $_ci = null;
 
 	public $version = "";
@@ -32,6 +34,33 @@ class Bangumi {
 
 	public function get_dist() {
 		return $this->_get(self::DIST_URL);
+	}
+
+	public function get_dist_size() {
+		return $this->_remote_filesize(SELF::DIST_URL);
+	}
+
+	public function download_dist() {
+		$file = APPPATH . "cache/data.json";
+		touch($file);
+		$fp_remote = fopen(self::DIST_URL, "rb");
+		$fp_local  = fopen($file, "wb");
+		while (!feof($fp_remote)) {
+			if (!file_exists($file)) {
+				fclose($fp_local);
+				fclose($fp_remote);
+				return false;
+			}
+			fwrite($fp_local, fread($fp_remote, 1024 * 256 ), 1024 * 256);
+		}
+		fclose($fp_local);
+		fclose($fp_remote);
+		return true;
+	}
+
+	public function cache_dist() {
+		$data = $this->_send_request(self::DIST_URL);
+		return file_put_contents(APPPATH . "cache/data.json", $data);
 	}
 
 	/**
@@ -254,7 +283,7 @@ class Bangumi {
 		return true;
 	}
 
-	public function save_onair_site($name, $content) {
+	public function save_site($name, $content) {
 		$this->_m("site")->save($name, $content);
 	}
 
@@ -303,7 +332,7 @@ class Bangumi {
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
 		}
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0");
+		curl_setopt($curl, CURLOPT_USERAGENT, self::USERAGENT);
 		if(!empty($this->_github_user) && !empty($this->_github_token)) {
 			curl_setopt($curl, CURLOPT_USERPWD, $this->_github_user . ":" . $this->_github_token);
 		}
@@ -311,5 +340,42 @@ class Bangumi {
 		$errno  = curl_errno($curl);
 		curl_close($curl);
 		return $output;
+	}
+
+	private function _remote_filesize($url) {
+		// Assume failure.
+		$result = -1;
+
+		$curl = curl_init( $url );
+
+		// Issue a HEAD request and follow any redirects.
+		curl_setopt( $curl, CURLOPT_NOBODY, true );
+		curl_setopt( $curl, CURLOPT_HEADER, true );
+		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+		curl_setopt( $curl, CURLOPT_FOLLOWLOCATION, true );
+		curl_setopt( $curl, CURLOPT_USERAGENT, self::USERAGENT );
+
+		$data = curl_exec( $curl );
+		curl_close( $curl );
+
+		if( $data ) {
+			$content_length = "unknown";
+			$status = "unknown";
+
+			if( preg_match( "/^HTTP\/1\.[01] (\d\d\d)/", $data, $matches ) ) {
+				$status = (int)$matches[1];
+			}
+
+			if( preg_match( "/Content-Length: (\d+)/", $data, $matches ) ) {
+				$content_length = (int)$matches[1];
+			}
+
+			// http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+			if( $status == 200 || ($status > 300 && $status <= 308) ) {
+				$result = $content_length;
+			}
+		}
+
+		return $result;
 	}
 }

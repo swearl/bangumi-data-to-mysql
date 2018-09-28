@@ -24,13 +24,6 @@ apache可以直接使用.htaccess, nginx请自行设置
 
 ## 设置
 
-#### 设置application/config/config.php
-
-```php
-// 改为正式的URL
-$config['base_url'] = 'http://localhost/bangumi-data-to-mysql/';
-```
-
 #### 设置application/config/database.php
 
 ```php
@@ -41,7 +34,7 @@ $db['default'] = array(
 	'password' => '12345678',  // MySQl密码
 	'database' => 'bangumi',   // MySQL数据库
 	'dbdriver' => 'mysqli',
-	'dbprefix' => 'bd_',       // 表前缀
+	'dbprefix' => '',
 	'pconnect' => FALSE,
 	'db_debug' => (ENVIRONMENT !== 'production'),
 	'cache_on' => FALSE,
